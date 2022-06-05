@@ -1,0 +1,245 @@
+<!DOCTYPE HTML><html>
+<head>
+  <title>ESP32 Disinfection Module</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat&display=swap" rel="stylesheet">
+
+  <style>
+    html {
+      font-family: 'Montserrat', sans-serif; 
+      display: inline-block; 
+      text-align: center;
+    }
+    h3 {
+      font-size: 1.5rem; 
+      color: white;
+      margin-bottom: auto;
+
+    }
+
+    h4 { 
+      font-size: 1.2rem;
+    }
+
+    p {
+      font-size: 1.4rem;
+    }
+
+    body {  
+      margin: 0;
+    }
+
+    .switch {
+      position: relative; 
+      display: inline-block;
+      width: 120px; 
+      height: 68px; 
+      margin-bottom: 20px;
+    }
+
+    .switch input {
+      display: none;
+    }
+
+    .slider {
+      position: absolute; 
+      top: 0; 
+      left: 0; 
+      right: 0; 
+      bottom: 0; 
+      background-color: #ccc; 
+      border-radius: 68px;   
+      opacity: 0.8;   
+      cursor: pointer;
+    }
+
+    .slider:before {
+      position: absolute; 
+      content: ""; 
+      height: 52px;
+      width: 52px; 
+      left: 8px; 
+      bottom: 8px; 
+      background-color: #fff; 
+      -webkit-transition: .4s; 
+      transition: .4s; 
+      border-radius: 68px
+    }
+
+    input:checked+.slider {
+      background-color: #1b78e2
+    }
+
+    input:checked+.slider:before {
+      -webkit-transform: translateX(52px); 
+      -ms-transform: translateX(52px); 
+      transform: translateX(52px)
+    }
+
+    .topnav { 
+      overflow: hidden; 
+      background-color: #1b78e2;
+      }
+    .content { 
+      padding: 20px;
+    }
+
+    .card { 
+      background-color: white; 
+      box-shadow: 2px 2px 12px 1px rgba(140,140,140,.5);
+      border-radius: 10px;
+    }
+
+    .container{
+      border-radius: 10px;
+    }
+    .graphTitle{
+      font-family: 'Montserrat', sans-serif; 
+    }
+    .cards { 
+      max-width: 1200px; 
+      margin: 0 auto; 
+      display: grid; 
+      grid-gap: 2rem; 
+      grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+    }
+
+    .notice {
+      font-size: 0.6rem;
+      color: red;
+    }
+    .time{
+      font-size: 0.8rem;
+      color: white;
+
+    }
+
+    .reading { font-size: 2.6rem;}
+
+    .card-switch {color: #1b78e2; }
+
+    .card-dht{ color: #1b78e2;}
+
+    .icon-pointer{ cursor: pointer;}
+
+  </style>
+</head>
+<body>
+
+  <div class="topnav">
+    <h3>DISINFECTION MODULE <span style="text-align:right;">&nbsp;&nbsp; <i class="fas fa-sign-out-alt" onclick="logoutButton()"></i></span></h3>
+    <p class="time">Time Elapsed: <span id="elapsed"></span></p>
+  </div>
+  
+  <div class="content">
+    <div class="cards">
+      %BUTTONPLACEHOLDER%
+      <div class="card card-dht">
+        <h4><i class="fas fa-thermometer-half"></i> ROOM TEMPERATURE</h4><div><p class="reading"><span id="temp"></span>&deg;C</p></div>
+      </div>
+      <div class="card card-dht">
+        <h4><i class="fas fa-tint"></i> ROOM HUMIDITY</h4><div><p class="reading"><span id="humi"></span>&percnt;</p></div>
+      </div>
+      <div class="card card-dht">
+        <h4><i class="fas fa-child"></i> BODY TEMPERATURE
+          <p class="notice">Please place your hand in front of the sensor</p>
+        </h4>
+        <div><p class="reading"><span id="body_temp"></span>&deg;C</p></div>
+      </div>
+      <div class="card card-dht">
+        <h4><i class="fas fa-ruler-horizontal"></i> DISTANCE LEFT</h4>
+        <div><p class="reading"><span id="dist_left"></span>m</p></div>
+      </div>
+      <div class="card card-dht">
+        <h4><i class="fas fa-circle-notch"></i> LEFT NOZZLE ANGLE</h4>
+        <div><p class="reading"><span id="nozz_angle_left"></span>&deg;</p></div>
+      </div>
+      <div class="card card-dht">
+        <h4><i class="fas fa-ruler-horizontal"></i> DISTANCE RIGHT</h4>
+        <div><p class="reading"><span id="dist_right"></span>m</p></div>
+      </div>
+      <div class="card card-dht">
+        <h4><i class="fas fa-circle-notch"></i> RIGHT NOZZLE ANGLE</h4>
+        <div><p class="reading"><span id="nozz_angle_right"></span>&deg;</p></div>
+      </div>
+
+    </div>
+  </div>
+<script>
+function logoutButton() {
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", "/logout", true);
+  xhr.send();
+  setTimeout(function(){ window.open("/logged-out","_self"); }, 1000);
+}
+function controlOutput(element) {
+  var xhr = new XMLHttpRequest();
+  if(element.checked){ xhr.open("GET", "/output?state=1", true); }
+  else { xhr.open("GET", "/output?state=0", true); }
+  xhr.send();
+}
+
+
+if (!!window.EventSource) {
+ var source = new EventSource('/events');
+ source.addEventListener('open', function(e) {
+  console.log("Events Connected");
+ }, false);
+ source.addEventListener('error', function(e) {
+  if (e.target.readyState != EventSource.OPEN) {
+    console.log("Events Disconnected");
+  }
+ }, false);
+ source.addEventListener('message', function(e) {
+  console.log("message", e.data);
+ }, false);
+ 
+
+ source.addEventListener('temperature', function(e) {
+  console.log("temperature", e.data);
+  document.getElementById("temp").innerHTML = e.data;
+ }, false);
+
+ source.addEventListener('humidity', function(e) {
+  console.log("humidity", e.data);
+  document.getElementById("humi").innerHTML = e.data;
+ }, false);
+
+ source.addEventListener('body_temperature', function(e) {
+  console.log("body_temperature", e.data);
+  document.getElementById("body_temp").innerHTML = e.data;
+ }, false);
+ 
+  source.addEventListener('distance_left', function(e) {
+  console.log("distance_left", e.data);
+  document.getElementById("dist_left").innerHTML = e.data;
+ }, false);
+
+   source.addEventListener('nozzle_angle_left', function(e) {
+  console.log("nozzle_angle_left", e.data);
+  document.getElementById("nozz_angle_left").innerHTML = e.data;
+ }, false);
+
+  source.addEventListener('distance_right', function(e) {
+  console.log("distance_right", e.data);
+  document.getElementById("dist_right").innerHTML = e.data;
+ }, false);
+
+   source.addEventListener('nozzle_angle_right', function(e) {
+  console.log("nozzle_angle_right", e.data);
+  document.getElementById("nozz_angle_right").innerHTML = e.data;
+ }, false);
+
+ source.addEventListener('time_elapsed', function(e) {
+  console.log("time_elapsed", e.data);
+  document.getElementById("elapsed").innerHTML = e.data;
+ }, false);
+
+
+
+}</script>
+</body>
+</html>
